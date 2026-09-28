@@ -11,6 +11,9 @@ st.set_page_config(
     layout="wide",
 )
 
+# URL Oficial de tu Google Sheets
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1Dyl-sRsm_TskiPrtE6Kp7wmcZ5bng4pdelbDuZEypB0/edit?gid=0#gid=0"
+
 # Conexión a Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -128,7 +131,6 @@ tab1, tab2 = st.tabs(["📝 Nuevo Registro", "✏️ Gestionar / Editar / Elimin
 # PESTAÑA 1: NUEVO REGISTRO
 # ==========================================
 with tab1:
-    # 1. SELECCIÓN EN CASCADA (Fuera del form para actualización inmediata)
     st.subheader("1. Selección de Línea, Producto y Equipo")
     col_a, col_b, col_c = st.columns(3)
 
@@ -178,7 +180,6 @@ with tab1:
         else:
             equipo_final = equipo_sel
 
-    # 2. RESTO DE DATOS DEL FORMULARIO
     with st.form("form_control_proceso", clear_on_submit=True):
         st.subheader("2. Información General del Proceso")
         col1, col2, col3, col4 = st.columns(4)
@@ -303,7 +304,7 @@ with tab1:
         }
 
         try:
-            df_existente = conn.read(ttl=0)
+            df_existente = conn.read(spreadsheet=SPREADSHEET_URL, ttl=0)
             df_nuevo = pd.DataFrame([nuevo_registro])
 
             if df_existente.empty or df_existente.dropna(how="all").empty:
@@ -313,7 +314,7 @@ with tab1:
                     [df_existente, df_nuevo], ignore_index=True
                 )
 
-            conn.update(data=df_actualizado)
+            conn.update(spreadsheet=SPREADSHEET_URL, data=df_actualizado)
             st.success("✅ ¡Registro guardado exitosamente en Google Sheets!")
             st.cache_data.clear()
         except Exception as e:
@@ -330,9 +331,8 @@ with tab2:
     )
 
     try:
-        df_registros = conn.read(ttl=0)
+        df_registros = conn.read(spreadsheet=SPREADSHEET_URL, ttl=0)
         if not df_registros.empty and not df_registros.dropna(how="all").empty:
-            # Editor interactivo
             df_editado = st.data_editor(
                 df_registros,
                 num_rows="dynamic",
@@ -347,7 +347,7 @@ with tab2:
                     use_container_width=True,
                 ):
                     try:
-                        conn.update(data=df_editado)
+                        conn.update(spreadsheet=SPREADSHEET_URL, data=df_editado)
                         st.success("✅ ¡Google Sheets actualizado con éxito!")
                         st.cache_data.clear()
                         st.rerun()
@@ -358,7 +358,6 @@ with tab2:
             st.subheader("📥 Exportar Historial Completo")
             col_down1, col_down2 = st.columns(2)
 
-            # Botón Descargar Excel (.xlsx)
             buffer_excel = io.BytesIO()
             with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
                 df_registros.to_excel(
@@ -375,7 +374,6 @@ with tab2:
                     use_container_width=True,
                 )
 
-            # Botón Descargar CSV (.csv)
             data_csv = df_registros.to_csv(index=False).encode("utf-8")
             with col_down2:
                 st.download_button(
