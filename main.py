@@ -19,6 +19,13 @@ FILE_PATH = "procesos.xlsx"
 def conectar_google_sheets():
     creds = dict(st.secrets["connections"]["gsheets"])
     creds_clean = {k: v for k, v in creds.items() if k != "spreadsheet"}
+
+    # Asegurar que los saltos de linea de la clave RSA se procesen bien
+    if "private_key" in creds_clean:
+        creds_clean["private_key"] = creds_clean["private_key"].replace(
+            "\\n", "\n"
+        )
+
     client = gspread.service_account_from_dict(creds_clean)
     sheet = client.open_by_url(SPREADSHEET_URL).sheet1
     return sheet
