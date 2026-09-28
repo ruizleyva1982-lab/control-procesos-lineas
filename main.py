@@ -1,9 +1,9 @@
 import datetime
 import io
 import os
+import gspread
 import pandas as pd
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(
     page_title="Control de Procesos - Líneas",
@@ -11,16 +11,25 @@ st.set_page_config(
     layout="wide",
 )
 
-# URL Oficial de tu Google Sheets
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1Dyl-sRsm_TskiPrtE6Kp7wmcZ5bng4pdelbDuZEypB0/edit?gid=0#gid=0"
-
-# Conexión a Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# Archivo Excel local para catálogos de apoyo
 FILE_PATH = "procesos.xlsx"
 
-# Catálogo relacional por defecto (Línea -> Lista de Productos)
+
+@st.cache_resource
+def conectar_google_sheets():
+    creds = dict(st.secrets["connections"]["gsheets"])
+    creds_clean = {k: v for k, v in creds.items() if k != "spreadsheet"}
+    client = gspread.service_account_from_dict(creds_clean)
+    sheet = client.open_by_url(SPREADSHEET_URL).sheet1
+    return sheet
+
+
+try:
+    ws = conectar_google_sheets()
+except Exception as e:
+    st.error(f"❌ Error al conectar con Google Sheets: {e}")
+    st.stop()
+
 CATALOGO_DEFAULT = {
     "MUFFINS": [
         "MUFFIN DE MANZANA - FRESCO - (UND)",
@@ -69,7 +78,6 @@ EQUIPOS_DEFAULT = [
 
 @st.cache_data(ttl=3600)
 def cargar_catalogos():
-    """Carga la relación Línea -> Productos y los Equipos desde el Excel."""
     mapa_linea_productos = CATALOGO_DEFAULT.copy()
     equipos = EQUIPOS_DEFAULT
 
@@ -79,7 +87,9 @@ def cargar_catalogos():
             for sheet in xls.sheet_names:
                 df = pd.read_excel(FILE_PATH, sheet_name=sheet)
                 for idx, row in df.iterrows():
-                    row_vals = [str(v).strip() for v in row.values if pd.notna(v)]
+                    row_vals = [
+                        str(v).strip() for v in row.values if pd.notna(v)
+                    ]
                     if "PRODUCTO" in row_vals and "LÍNEA DE PROCESO" in row_vals:
                         header_idx = idx
                         df_data = df.iloc[header_idx + 1 :].copy()
@@ -89,8 +99,16 @@ def cargar_catalogos():
 
                         temp_map = {}
                         for _, r in df_data.iterrows():
-                            p = str(r["PRODUCTO"]).strip() if pd.notna(r.get("PRODUCTO")) else None
-                            l = str(r["LÍNEA DE PROCESO"]).strip() if pd.notna(r.get("LÍNEA DE PROCESO")) else None
+                            p = (
+                                str(r["PRODUCTO"]).strip()
+                                if pd.notna(r.get("PRODUCTO"))
+                                else None
+                            )
+                            l = (
+                                str(r["LÍNEA DE PROCESO"]).strip()
+                                if pd.notna(r.get("LÍNEA DE PROCESO"))
+                                else None
+                            )
                             if p and l:
                                 if l not in temp_map:
                                     temp_map[l] = []
@@ -123,22 +141,18 @@ def cargar_catalogos():
 mapa_linea_productos, lista_equipos = cargar_catalogos()
 lista_lineas = list(mapa_linea_productos.keys())
 
-# --- NAVEGACIÓN PRINCIPAL CON PESTAÑAS ---
 st.title("📋 FORMATO CONTROL DE PROCESOS LÍNEAS")
-tab1, tab2 = st.tabs(["📝 Nuevo Registro", "✏️ Gestionar / Editar / Eliminar Historial"])
+tab1, tab2 = st.tabs(
+    ["📝 Nuevo Registro", "✏️ Gestionar / Editar / Eliminar Historial"]
+)
 
-# ==========================================
-# PESTAÑA 1: NUEVO REGISTRO
-# ==========================================
 with tab1:
     st.subheader("1. Selección de Línea, Producto y Equipo")
     col_a, col_b, col_c = st.columns(3)
 
     with col_a:
         linea_sel = st.selectbox(
-            "LÍNEA DE PROCESO",
-            options=lista_lineas,
-            key="select_linea_filtro",
+            "LÍNEA DE PROCESO", options=lista_lineas, key="select_linea_filtro"
         )
         if linea_sel == "OTRO":
             linea_text = st.text_input(
@@ -193,7 +207,9 @@ with tab1:
                 "LOTE", placeholder="Ej. L-20260901", key="input_lote"
             )
         with col3:
-            batch = st.text_input("BATCH", placeholder="Ej. B-01", key="input_batch")
+            batch = st.text_input(
+                "BATCH", placeholder="Ej. B-01", key="input_batch"
+            )
         with col4:
             responsable = st.text_input(
                 "RESPONSABLE",
@@ -233,12 +249,20 @@ with tab1:
         col12, col13, col14 = st.columns(3)
 
         with col12:
-            hora_inicio = st.time_input("HORA INICIO", value=datetime.time(8, 0))
+            hora_inicio = st.time_input(
+                "HORA INICIO", value=datetime.time(8, 0)
+            )
         with col13:
-            hora_termino = st.time_input("HORA TÉRMINO", value=datetime.time(8, 15))
+            hora_termino = st.time_input(
+                "HORA TÉRMINO", value=datetime.time(8, 15)
+            )
 
-        dt_inicio = datetime.datetime.combine(datetime.date.today(), hora_inicio)
-        dt_termino = datetime.datetime.combine(datetime.date.today(), hora_termino)
+        dt_inicio = datetime.datetime.combine(
+            datetime.date.today(), hora_inicio
+        )
+        dt_termino = datetime.datetime.combine(
+            datetime.date.today(), hora_termino
+        )
         if dt_termino < dt_inicio:
             dt_termino += datetime.timedelta(days=1)
 
@@ -285,44 +309,53 @@ with tab1:
         )
 
     if btn_guardar:
-        nuevo_registro = {
-            "PRODUCTO": producto_final,
-            "LÍNEA DE PROCESO": linea_final,
-            "CONDICIONES DEL AREA DE TRABAJO": cond_area,
-            "F.P": fecha_p.strftime("%Y-%m-%d"),
-            "LOTE": lote,
-            "BATCH": batch,
-            "EQUIPO UTILIZADO": equipo_final,
-            "HORA INICIO": hora_inicio.strftime("%H:%M"),
-            "CONDICIONES DEL EQUIPO": cond_equipo,
-            "CONDICIONES DE LOS INSUMOS": cond_insumos,
-            "CARACTERISTICAS DEL PRODUCTO": caract_producto,
-            "HORA TÉRMINO": hora_termino.strftime("%H:%M"),
-            "TIEMPO": tiempo_calculado,
-            "RESPONSABLE": responsable,
-            "OBSERVACIÓN": observacion_final,
-        }
+        headers = [
+            "PRODUCTO",
+            "LÍNEA DE PROCESO",
+            "CONDICIONES DEL AREA DE TRABAJO",
+            "F.P",
+            "LOTE",
+            "BATCH",
+            "EQUIPO UTILIZADO",
+            "HORA INICIO",
+            "CONDICIONES DEL EQUIPO",
+            "CONDICIONES DE LOS INSUMOS",
+            "CARACTERISTICAS DEL PRODUCTO",
+            "HORA TÉRMINO",
+            "TIEMPO",
+            "RESPONSABLE",
+            "OBSERVACIÓN",
+        ]
+
+        fila_nueva = [
+            producto_final,
+            linea_final,
+            cond_area,
+            fecha_p.strftime("%Y-%m-%d"),
+            lote,
+            batch,
+            equipo_final,
+            hora_inicio.strftime("%H:%M"),
+            cond_equipo,
+            cond_insumos,
+            caract_producto,
+            hora_termino.strftime("%H:%M"),
+            tiempo_calculado,
+            responsable,
+            observacion_final,
+        ]
 
         try:
-            df_existente = conn.read(spreadsheet=SPREADSHEET_URL, ttl=0)
-            df_nuevo = pd.DataFrame([nuevo_registro])
+            datos_existentes = ws.get_all_values()
+            if not datos_existentes:
+                ws.append_row(headers)
 
-            if df_existente.empty or df_existente.dropna(how="all").empty:
-                df_actualizado = df_nuevo
-            else:
-                df_actualizado = pd.concat(
-                    [df_existente, df_nuevo], ignore_index=True
-                )
-
-            conn.update(spreadsheet=SPREADSHEET_URL, data=df_actualizado)
+            ws.append_row(fila_nueva)
             st.success("✅ ¡Registro guardado exitosamente en Google Sheets!")
-            st.cache_data.clear()
+            st.rerun()
         except Exception as e:
             st.error(f"❌ Error al guardar en Google Sheets: {e}")
 
-# ==========================================
-# PESTAÑA 2: EDITAR Y ELIMINAR HISTORIAL
-# ==========================================
 with tab2:
     st.subheader("📊 Edición, Eliminación y Descarga de Registros")
     st.info(
@@ -331,8 +364,9 @@ with tab2:
     )
 
     try:
-        df_registros = conn.read(spreadsheet=SPREADSHEET_URL, ttl=0)
-        if not df_registros.empty and not df_registros.dropna(how="all").empty:
+        registros = ws.get_all_records()
+        if registros:
+            df_registros = pd.DataFrame(registros)
             df_editado = st.data_editor(
                 df_registros,
                 num_rows="dynamic",
@@ -347,9 +381,12 @@ with tab2:
                     use_container_width=True,
                 ):
                     try:
-                        conn.update(spreadsheet=SPREADSHEET_URL, data=df_editado)
+                        ws.clear()
+                        ws.update(
+                            [df_editado.columns.values.tolist()]
+                            + df_editado.values.tolist()
+                        )
                         st.success("✅ ¡Google Sheets actualizado con éxito!")
-                        st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Error al actualizar: {e}")
@@ -386,4 +423,4 @@ with tab2:
         else:
             st.info("Aún no hay registros guardados en Google Sheets.")
     except Exception as e:
-        st.error(f"Error al conectar con Google Sheets: {e}")
+        st.error(f"Error al leer desde Google Sheets: {e}")
