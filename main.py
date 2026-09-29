@@ -17,22 +17,58 @@ FILE_PATH = "procesos.xlsx"
 
 
 # --- CONEXIÓN DIRECTA A GOOGLE SHEETS CON AUTOCORRECCIÓN DE LLAVE ---
+import json
+import re
+import gspread
+import streamlit as st
+
+# ... (mantén tus constantes SHEET_ID, FILE_PATH, etc.)
+
+
 def conectar_google_sheets():
-  # Lee los secretos configurados en Streamlit Cloud
   if "gcp_service_account" in st.secrets:
     cred_dict = dict(st.secrets["gcp_service_account"])
   else:
-    # Si no hay secrets, intenta leer de un archivo local credentials.json
-    import json
-
     with open("credentials.json", "r") as f:
       cred_dict = json.load(f)
 
-  # LIMPIEZA AUTOMÁTICA DE LA LLAVE PRIVADA (Corrige saltos de línea y símbolos inválidos)
   private_key = cred_dict.get("private_key", "")
+
+  # --- LIMPIEZA RADICAL DE EMERGENCIA ---
   if private_key:
-    # Reemplaza los literales '\n' por saltos de línea reales si vienen escapados
+    # 1. Si por error se pegaron puntos suspensivos u otros caracteres, limpiemos el bloque base64
+    # Reemplazamos literales \n por saltos de línea reales
     private_key = private_key.replace("\\n", "\n")
+
+    # Si la clave contiene puntos suspensivos (ej. "MIIEvAI..."), el usuario copió mal la clave del JSON.
+    # Vamos a extraer únicamente los bloques válidos o limpiar los puntos y espacios raros.
+    private_key = private_key.strip()
+
+    # Asegurar formato PEM correcto si por alguna razón no tiene los headers
+    if "BEGIN PRIVATE KEY" not in private_key:
+      # Intento de reconstrucción si pegaste solo el texto base64 roto
+      clean_base64 = re.sub(
+          r"[^A-Za-z0-9+/=\n]", "", private_key
+      )  # Elimina puntos y símbolos raros
+      private_key = (
+          "-----\nBEGIN PRIVATE KEY-----\n"
+          + clean_base64
+          + "\n-----END PRIVATE KEY-----"
+      )
+    else:
+      # Si tiene los headers pero adentro hay puntos u otra basura, limpiamos línea por línea
+      lines = private_key.split("\n")
+      cleaned_lines = []
+      for line in lines:
+        if "BEGIN PRIVATE KEY" in line or "END PRIVATE KEY" in line:
+          cleaned_lines.append(line)
+        else:
+          # Limpiar cualquier caracter que no sea Base64 válido (incluyendo el maldito punto 'sybmol 46')
+          cleaned_line = re.sub(r"[^A-Za-z0-9+/=]", "", line)
+          if cleaned_line:
+            cleaned_lines.append(cleaned_line)
+      private_key = "\n".join(cleaned_lines)
+
     cred_dict["private_key"] = private_key
 
   client = gspread.service_account_from_dict(cred_dict)
