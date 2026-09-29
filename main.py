@@ -17,10 +17,13 @@ SHEET_ID = "1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc"
 FILE_PATH = "procesos.xlsx"
 
 
-# --- CONEXIÓN DIRECTA A GOOGLE SHEETS MEDIANTE JSON ---
+# --- CONEXIÓN SEGURA A GOOGLE SHEETS MEDIANTE ST.SECRETS ---
 def conectar_google_sheets():
-  # Lee directamente el archivo credentials.json de la raíz del proyecto
-  client = gspread.service_account(filename="credentials.json")
+  # Convierte los secrets de Streamlit en un diccionario dict estándar
+  secretos_dict = dict(st.secrets["gcp_service_account"])
+
+  # Autoriza usando el diccionario en memoria (evita errores de archivos corruptos o PEM)
+  client = gspread.service_account_from_dict(secretos_dict)
   doc = client.open_by_key(SHEET_ID)
   return doc.get_worksheet(0)
 
