@@ -97,8 +97,9 @@ headers = [
 
 try:
   ws = conectar_google_sheets()
-  # Forzar actualización automática de la cabecera en Google Sheets para evitar desajustes
-  ws.update(range_name="A1:O1", values=[headers])
+  # Limpieza y actualización absoluta y forzada de la fila 1
+  ws.batch_clear(["A1:O1"])
+  ws.update("A1", [headers])
   data = ws.get_all_records()
   df_actual = pd.DataFrame(data)
 except Exception as e:
@@ -353,21 +354,21 @@ with tab1:
   if btn_guardar:
     # ORDEN EXACTO COINCIDENTE CON 'headers' (Columna B = CONDICIONES DEL AREA DE TRABAJO)
     fila_nueva = [
-        producto_final,  # 1. PRODUCTO
-        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
-        linea_final,  # 3. LÍNEA DE PROCESO
-        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P
-        lote,  # 5. LOTE
-        batch,  # 6. BATCH
-        equipo_final,  # 7. EQUIPO UTILIZADO
-        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO
-        cond_equipo,  # 9. CONDICIONES DEL EQUIPO
-        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS
-        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO
-        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO
-        tiempo_calculado,  # 13. TIEMPO
-        responsable,  # 14. RESPONSABLE
-        observacion_final,  # 15. OBSERVACIÓN
+        producto_final,  # 1. PRODUCTO (A)
+        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO (B)
+        linea_final,  # 3. LÍNEA DE PROCESO (C)
+        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P (D)
+        lote,  # 5. LOTE (E)
+        batch,  # 6. BATCH (F)
+        equipo_final,  # 7. EQUIPO UTILIZADO (G)
+        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO (H)
+        cond_equipo,  # 9. CONDICIONES DEL EQUIPO (I)
+        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS (J)
+        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO (K)
+        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO (L)
+        tiempo_calculado,  # 13. TIEMPO (M)
+        responsable,  # 14. RESPONSABLE (N)
+        observacion_final,  # 15. OBSERVACIÓN (O)
     ]
     try:
       ws.append_row(fila_nueva)
@@ -422,12 +423,12 @@ with tab2:
                   nuevo_prod = st.text_input(
                       "PRODUCTO", value=row.get("PRODUCTO", "")
                   )
-                  nueva_linea = st.text_input(
-                      "LÍNEA DE PROCESO", value=row.get("LÍNEA DE PROCESO", "")
-                  )
                   nuevo_area = st.text_input(
                       "CONDICIONES DEL AREA DE TRABAJO",
                       value=row.get("CONDICIONES DEL AREA DE TRABAJO", ""),
+                  )
+                  nueva_linea = st.text_input(
+                      "LÍNEA DE PROCESO", value=row.get("LÍNEA DE PROCESO", "")
                   )
                 with col_e2:
                   nuevo_lote = st.text_input("LOTE", value=row.get("LOTE", ""))
@@ -458,14 +459,14 @@ with tab2:
                 if btn_actualizar:
                   try:
                     fila_actualizada = [
-                        nuevo_prod,  # 1. PRODUCTO
-                        nuevo_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
-                        nueva_linea,  # 3. LÍNEA DE PROCESO
-                        row.get("F.P", fecha_seleccionada),  # 4. F.P
-                        nuevo_lote,  # 5. LOTE
-                        nuevo_batch,  # 6. BATCH
-                        nuevo_equipo,  # 7. EQUIPO UTILIZADO
-                        nuevo_inicio,  # 8. HORA INICIO
+                        nuevo_prod,  # 1. PRODUCTO (A)
+                        nuevo_area,  # 2. CONDICIONES DEL AREA DE TRABAJO (B)
+                        nueva_linea,  # 3. LÍNEA DE PROCESO (C)
+                        row.get("F.P", fecha_seleccionada),  # 4. F.P (D)
+                        nuevo_lote,  # 5. LOTE (E)
+                        nuevo_batch,  # 6. BATCH (F)
+                        nuevo_equipo,  # 7. EQUIPO UTILIZADO (G)
+                        nuevo_inicio,  # 8. HORA INICIO (H)
                         row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
                         row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
                         row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
