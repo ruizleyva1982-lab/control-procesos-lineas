@@ -1,5 +1,4 @@
 import datetime
-import io
 import os
 import gspread
 import pandas as pd
@@ -17,13 +16,26 @@ SHEET_ID = "1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc"
 FILE_PATH = "procesos.xlsx"
 
 
-# --- CONEXIÓN SEGURA A GOOGLE SHEETS MEDIANTE ST.SECRETS ---
+# --- CONEXIÓN DIRECTA A GOOGLE SHEETS CON AUTOCORRECCIÓN DE LLAVE ---
 def conectar_google_sheets():
-  # Convierte los secrets de Streamlit en un diccionario dict estándar
-  secretos_dict = dict(st.secrets["gcp_service_account"])
+  # Lee los secretos configurados en Streamlit Cloud
+  if "gcp_service_account" in st.secrets:
+    cred_dict = dict(st.secrets["gcp_service_account"])
+  else:
+    # Si no hay secrets, intenta leer de un archivo local credentials.json
+    import json
 
-  # Autoriza usando el diccionario en memoria (evita errores de archivos corruptos o PEM)
-  client = gspread.service_account_from_dict(secretos_dict)
+    with open("credentials.json", "r") as f:
+      cred_dict = json.load(f)
+
+  # LIMPIEZA AUTOMÁTICA DE LA LLAVE PRIVADA (Corrige saltos de línea y símbolos inválidos)
+  private_key = cred_dict.get("private_key", "")
+  if private_key:
+    # Reemplaza los literales '\n' por saltos de línea reales si vienen escapados
+    private_key = private_key.replace("\\n", "\n")
+    cred_dict["private_key"] = private_key
+
+  client = gspread.service_account_from_dict(cred_dict)
   doc = client.open_by_key(SHEET_ID)
   return doc.get_worksheet(0)
 
@@ -303,23 +315,22 @@ with tab1:
     )
 
   if btn_guardar:
-    # ORDEN EXACTO DE LAS 15 COLUMNAS (DE A HASTA O)
     fila_nueva = [
-        cond_area,  # A: CONDICIONES DEL AREA DE TRABAJO
-        producto_final,  # B: PRODUCTO
-        linea_final,  # C: LÍNEA DE PROCESO
-        fecha_p.strftime("%Y-%m-%d"),  # D: F.P
-        lote,  # E: LOTE
-        batch,  # F: BATCH
-        equipo_final,  # G: EQUIPO UTILIZADO
-        hora_inicio.strftime("%H:%M"),  # H: HORA INICIO
-        cond_equipo,  # I: CONDICIONES DEL EQUIPO
-        cond_insumos,  # J: CONDICIONES DE LOS INSUMOS
-        caract_producto,  # K: CARACTERISTICAS DEL PRODUCTO
-        hora_termino.strftime("%H:%M"),  # L: HORA TÉRMINO
-        tiempo_calculado,  # M: TIEMPO
-        responsable,  # N: RESPONSABLE
-        observacion_final,  # O: OBSERVACIÓN
+        cond_area,
+        producto_final,
+        linea_final,
+        fecha_p.strftime("%Y-%m-%d"),
+        lote,
+        batch,
+        equipo_final,
+        hora_inicio.strftime("%H:%M"),
+        cond_equipo,
+        cond_insumos,
+        caract_producto,
+        hora_termino.strftime("%H:%M"),
+        tiempo_calculado,
+        responsable,
+        observacion_final,
     ]
     with st.spinner("Guardando en Google Sheets..."):
       try:
