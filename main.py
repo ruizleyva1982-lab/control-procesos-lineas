@@ -65,8 +65,80 @@ def conectar_google_sheets():
       "auth_provider_x509_cert_url": (
           "https://www.googleapis.com/oauth2/v1/certs"
       ),
+      "client_x509_cert_Entendido perfectamente. Las **Condiciones del Área de Trabajo** (la condición principal) deben aparecer **primero**, antes de seleccionar la línea, el producto y el equipo. 
+
+Aquí tienes el archivo **`main.py` completo y corregido**, con el orden visual invertido en la interfaz para que la condición del área esté en el número 1, seguido de la selección en cascada y el resto del formulario:
+
+```python
+import datetime
+import io
+import os
+import gspread
+import pandas as pd
+import streamlit as st
+
+# Configuración de página
+st.set_page_config(
+    page_title="Control de Procesos - Líneas",
+    page_icon="📋",
+    layout="wide",
+)
+
+SPREADSHEET_URL = "[https://docs.google.com/spreadsheets/d/1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc/edit?gid=0#gid=0](https://docs.google.com/spreadsheets/d/1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc/edit?gid=0#gid=0)"
+FILE_PATH = "procesos.xlsx"
+
+
+# --- CONEXIÓN SEGURA A GOOGLE SHEETS ---
+@st.cache_resource
+def conectar_google_sheets():
+  pk_lines = [
+      "-----BEGIN PRIVATE KEY-----",
+      "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQChFFBYCHDbTJt4",
+      "QIJVeEpflh0wWXFspNZg2Y8v9CukuWGq2O+28MzxM5O+Pv6ls1bThUGnOAD85Fxz",
+      "DBPUm9BqifGRugMNBcE876Af3YuG5s+tDMxF+kWFyQEVVpvZOCK6/WWHOS74F4LN",
+      "WSgcJCWAlMqXlulKGgvvzGLW7QqSW0viJ+DesQd5kNT766qvVO0WyIFzh87N9z70",
+      "lwjzNIiBov/7XgKaagawNjaVm5Ob/2AGzU/82VMfB/DZoJhDEpcJ6qmHLgcKVqZT",
+      "RHLJZshWO4H8Kqxqfmvou6qziydJdBzTrFiqZ359bsUThHpl23mT5OgE4A0xYNY8",
+      "Cxr6Nt+FAgMBAAECggEAHNl4TVgPrHtTQg2dukSd33JRnoH6gligi76TemV7Npi8",
+      "QR7zChslPZL9BF8geRl+dMpiWJp7dM/KrhFM8PCKOrajlTPRTZEJC8qoLWTe00W+",
+      "DtKiuGrLbltyjfmR1q0K7V4qg7ZObwE4/GHaQPYJYHbltRJCjLLPDf8XecKBOPaH",
+      "ulp7EErv7WetyxJC2tqb/cZ2RiSu81ixTMhJkm6H4TnjREPj3FigR3kKjGutbdIS",
+      "4BmGX1MoX7d1ehYA06vt7Xj6uiPuLRxg/AfpZje9NJiH3W+JhrarGqalY2Wwnxe7",
+      "xaA5NJlRQ/pZUkbItVBaOwZc9cmF7hLXq6DKFnCnOQKBgQDTtIXUOBmuHOcC3LTq",
+      "1I6p8voTTofMoT1MSS4OD43hQOFMyiGWs0xpSmqJVmAtckKQmA9P6FdgmV93C8yO",
+      "Fza3m5o8QsfiamCYGTsoLFC6THdqqic2eUId3DCS79ln3M6HvY24oEj/aWgD5lkY",
+      "4b5azGsGce6YO7ZuKne9VWoiDQKBgQDCyCQl0EDxrkjs+FHuhRxyn2jyh10q8T3z",
+      "GGzhugeleazB0Wp7Pa9paVJkGkaKs0KgZUX8cO08t4e+5wkcWgDRE56Ss443qf98",
+      "fpOOqzdLfy4l/QF+QeJ1DJZCONhKgBwjjV2h5EzVqxRq3yRY+Enn8jdVc9p7FKbU",
+      "bqD3DjftWQKBgBWScYicZtF9FHUQNEcxfZAHuD+7Ys8RJwPc+Rppr1VinRKMDjwi",
+      "7QhVkuGHsakv2WSOehD0ZeLr/fRNeXyJFQREkMTPMTr7B/i3qXWAfoFdRVXTHMfK",
+      "N1h/lVuDoS2aLFlckVJc0tNj1DuBf1avugvahJVVirBsdTxoi2b5iyUJAoGABymo",
+      "+qL/4GNSVzSCfszyUNy/1TtZF70rVAcv6dUXduRUkAQNcF7CVpQC7Z9xvKP+7TsM",
+      "Kc5VSwhMu55vXVWJ9iZMjISB1FYyCPf2oSZ2sBYLMmZtaaEunLNLyz+f5I11e3E1",
+      "YkCs+qaB57Qw9/yZaygjFMdf32rQ/7rZvHwPXnECgYB2InoDsMB1KT+83SL6r3tF",
+      "hY7EePnosi2XWmR4ialkcinN6CsxS5jZ7ZISxPb2fBgYDFQVoNhkq1aZA6au5S4T",
+      "UWTDUQLOBnTurhCFQ/+nElZAlX4nF4M6wKUTlUEQsy7J2cICbSA4tEvx9DEsy2m7",
+      "40bXZzRQtzP8ciNAuypvAg==",
+      "-----END PRIVATE KEY-----",
+  ]
+  private_key_str = "\n".join(pk_lines)
+
+  cred_dict = {
+      "type": "service_account",
+      "project_id": "control-procesos-510021",
+      "private_key_id": "4ba35503d5be0db7e99c9da752bb173efee0c609",
+      "private_key": private_key_str,
+      "client_email": (
+          "control-procesos@control-procesos-510021.iam.gserviceaccount.com"
+      ),
+      "client_id": "110338130362201619109",
+      "auth_uri": "[https://accounts.google.com/o/oauth2/auth](https://accounts.google.com/o/oauth2/auth)",
+      "token_uri": "[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)",
+      "auth_provider_x509_cert_url": (
+          "[https://www.googleapis.com/oauth2/v1/certs](https://www.googleapis.com/oauth2/v1/certs)"
+      ),
       "client_x509_cert_url": (
-          "https://www.googleapis.com/robot/v1/metadata/x509/control-procesos%40control-procesos-510021.iam.gserviceaccount.com"
+          "[https://www.googleapis.com/robot/v1/metadata/x509/control-procesos%40control-procesos-510021.iam.gserviceaccount.com](https://www.googleapis.com/robot/v1/metadata/x509/control-procesos%40control-procesos-510021.iam.gserviceaccount.com)"
       ),
       "universe_domain": "googleapis.com",
   }
@@ -84,7 +156,7 @@ except Exception as e:
   st.error(f"❌ Error al conectar con Google Sheets: {e}")
   df_actual = pd.DataFrame()
 
-# --- NUEVAS CABECERAS: CONDICIONES DEL AREA DE TRABAJO AL COMIENZO ---
+# --- CABECERAS: CONDICIONES DEL AREA DE TRABAJO EN LA SEGUNDA POSICIÓN ---
 headers = [
     "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
@@ -215,62 +287,67 @@ tab1, tab2 = st.tabs(
 )
 
 # ==========================================
-# PESTAÑA 1: NUEVO REGISTRO (CASCADA Y ORDEN NUEVO)
+# PESTAÑA 1: NUEVO REGISTRO
 # ==========================================
 with tab1:
-  st.subheader("1. Selección de Línea, Producto y Equipo")
-  col_a, col_b, col_c = st.columns(3)
-
-  with col_a:
-    linea_sel = st.selectbox(
-        "LÍNEA DE PROCESO", options=lista_lineas, key="select_linea_filtro"
-    )
-    if linea_sel == "OTRO":
-      linea_text = st.text_input(
-          "Especifique Línea de Proceso", placeholder="Nombre de línea"
-      )
-      linea_final = linea_text
-      productos_disponibles = []
-    else:
-      linea_final = linea_sel
-      productos_disponibles = mapa_linea_productos.get(linea_sel, [])
-
-  with col_b:
-    if productos_disponibles:
-      opciones_producto = productos_disponibles + ["OTRO"]
-      prod_sel = st.selectbox(
-          "PRODUCTO", options=opciones_producto, key="select_producto_dinamico"
-      )
-      if prod_sel == "OTRO":
-        prod_text = st.text_input(
-            "Especifique Producto", placeholder="Nombre del producto"
-        )
-        producto_final = prod_text
-      else:
-        producto_final = prod_sel
-    else:
-      producto_final = st.text_input(
-          "PRODUCTO", placeholder="Escriba el nombre del producto"
-      )
-
-  with col_c:
-    equipo_sel = st.selectbox("EQUIPO UTILIZADO", options=lista_equipos)
-    if equipo_sel == "OTRO":
-      equipo_text = st.text_input(
-          "Especifique Equipo", placeholder="Nombre del equipo"
-      )
-      equipo_final = equipo_text
-    else:
-      equipo_final = equipo_sel
-
   with st.form("form_control_proceso", clear_on_submit=True):
-    st.subheader("2. Condición Principal del Área")
+    # 1. CONDICIÓN PRINCIPAL DEL ÁREA PRIMERO
+    st.subheader("1. Condición Principal del Área")
     cond_area = st.radio(
         "CONDICIONES DEL AREA DE TRABAJO",
         ["CONFORME", "NO CONFORME"],
         horizontal=True,
     )
 
+    st.markdown("---")
+
+    # 2. SELECCIÓN DE LÍNEA, PRODUCTO Y EQUIPO
+    st.subheader("2. Selección de Línea, Producto y Equipo")
+    col_a, col_b, col_c = st.columns(3)
+
+    with col_a:
+      linea_sel = st.selectbox(
+          "LÍNEA DE PROCESO", options=lista_lineas, key="select_linea_filtro"
+      )
+      if linea_sel == "OTRO":
+        linea_text = st.text_input(
+            "Especifique Línea de Proceso", placeholder="Nombre de línea"
+        )
+        linea_final = linea_text
+        productos_disponibles = []
+      else:
+        linea_final = linea_sel
+        productos_disponibles = mapa_linea_productos.get(linea_sel, [])
+
+    with col_b:
+      if productos_disponibles:
+        opciones_producto = productos_disponibles + ["OTRO"]
+        prod_sel = st.selectbox(
+            "PRODUCTO", options=opciones_producto, key="select_producto_dinamico"
+        )
+        if prod_sel == "OTRO":
+          prod_text = st.text_input(
+              "Especifique Producto", placeholder="Nombre del producto"
+          )
+          producto_final = prod_text
+        else:
+          producto_final = prod_sel
+      else:
+        producto_final = st.text_input(
+            "PRODUCTO", placeholder="Escriba el nombre del producto"
+        )
+
+    with col_c:
+      equipo_sel = st.selectbox("EQUIPO UTILIZADO", options=lista_equipos)
+      if equipo_sel == "OTRO":
+        equipo_text = st.text_input(
+            "Especifique Equipo", placeholder="Nombre del equipo"
+        )
+        equipo_final = equipo_text
+      else:
+        equipo_final = equipo_sel
+
+    st.markdown("---")
     st.subheader("3. Información General del Proceso")
     col1, col2, col3, col4 = st.columns(4)
 
@@ -347,23 +424,22 @@ with tab1:
     )
 
   if btn_guardar:
-    # FILA ORDENADA SEGÚN LAS NUEVAS CABECERAS
     fila_nueva = [
-        producto_final,  # 1. PRODUCTO
-        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
-        linea_final,  # 3. LÍNEA DE PROCESO
-        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P
-        lote,  # 5. LOTE
-        batch,  # 6. BATCH
-        equipo_final,  # 7. EQUIPO UTILIZADO
-        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO
-        cond_equipo,  # 9. CONDICIONES DEL EQUIPO
-        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS
-        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO
-        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO
-        tiempo_calculado,  # 13. TIEMPO
-        responsable,  # 14. RESPONSABLE
-        observacion_final,  # 15. OBSERVACIÓN
+        producto_final,
+        cond_area,
+        linea_final,
+        fecha_p.strftime("%Y-%m-%d"),
+        lote,
+        batch,
+        equipo_final,
+        hora_inicio.strftime("%H:%M"),
+        cond_equipo,
+        cond_insumos,
+        caract_producto,
+        hora_termino.strftime("%H:%M"),
+        tiempo_calculado,
+        responsable,
+        observacion_final,
     ]
     try:
       datos_existentes = ws.get_all_values()
