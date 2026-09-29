@@ -84,11 +84,11 @@ except Exception as e:
   st.error(f"❌ Error al conectar con Google Sheets: {e}")
   df_actual = pd.DataFrame()
 
-# --- CABECERAS ESTÁNDAR UNIFICADAS ---
+# --- NUEVAS CABECERAS: CONDICIONES DEL AREA DE TRABAJO AL COMIENZO ---
 headers = [
     "PRODUCTO",
-    "LÍNEA DE PROCESO",
     "CONDICIONES DEL AREA DE TRABAJO",
+    "LÍNEA DE PROCESO",
     "F.P",
     "LOTE",
     "BATCH",
@@ -215,7 +215,7 @@ tab1, tab2 = st.tabs(
 )
 
 # ==========================================
-# PESTAÑA 1: NUEVO REGISTRO
+# PESTAÑA 1: NUEVO REGISTRO (CASCADA Y ORDEN NUEVO)
 # ==========================================
 with tab1:
   st.subheader("1. Selección de Línea, Producto y Equipo")
@@ -264,7 +264,14 @@ with tab1:
       equipo_final = equipo_sel
 
   with st.form("form_control_proceso", clear_on_submit=True):
-    st.subheader("2. Información General del Proceso")
+    st.subheader("2. Condición Principal del Área")
+    cond_area = st.radio(
+        "CONDICIONES DEL AREA DE TRABAJO",
+        ["CONFORME", "NO CONFORME"],
+        horizontal=True,
+    )
+
+    st.subheader("3. Información General del Proceso")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -282,28 +289,24 @@ with tab1:
           key="input_responsable",
       )
 
-    st.subheader("3. Condiciones del Entorno e Insumos")
-    col8, col9, col10, col11 = st.columns(4)
+    st.subheader("4. Condiciones del Entorno e Insumos")
+    col8, col9, col10 = st.columns(3)
     with col8:
-      cond_area = st.radio(
-          "CONDICIONES AREA TRABAJO", ["CONFORME", "NO CONFORME"], horizontal=True
-      )
-    with col9:
       cond_equipo = st.radio(
           "CONDICIONES EQUIPO", ["CONFORME", "NO CONFORME"], horizontal=True
       )
-    with col10:
+    with col9:
       cond_insumos = st.radio(
           "CONDICIONES INSUMOS", ["CONFORME", "NO CONFORME"], horizontal=True
       )
-    with col11:
+    with col10:
       caract_producto = st.radio(
           "CARACTERISTICAS PRODUCTO",
           ["CONFORME", "NO CONFORME"],
           horizontal=True,
       )
 
-    st.subheader("4. Horarios y Tiempo de Proceso")
+    st.subheader("5. Horarios y Tiempo de Proceso")
     col12, col13, col14 = st.columns(3)
     with col12:
       hora_inicio = st.time_input("HORA INICIO", value=datetime.time(8, 0))
@@ -320,7 +323,7 @@ with tab1:
     with col14:
       st.text_input("TIEMPO CALCULADO", value=tiempo_calculado, disabled=True)
 
-    st.subheader("5. Observaciones Finales")
+    st.subheader("6. Observaciones Finales")
     col15, col16 = st.columns([1, 2])
     with col15:
       estado_obs = st.radio(
@@ -344,22 +347,23 @@ with tab1:
     )
 
   if btn_guardar:
+    # FILA ORDENADA SEGÚN LAS NUEVAS CABECERAS
     fila_nueva = [
-        producto_final,
-        linea_final,
-        cond_area,
-        fecha_p.strftime("%Y-%m-%d"),
-        lote,
-        batch,
-        equipo_final,
-        hora_inicio.strftime("%H:%M"),
-        cond_equipo,
-        cond_insumos,
-        caract_producto,
-        hora_termino.strftime("%H:%M"),
-        tiempo_calculado,
-        responsable,
-        observacion_final,
+        producto_final,  # 1. PRODUCTO
+        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
+        linea_final,  # 3. LÍNEA DE PROCESO
+        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P
+        lote,  # 5. LOTE
+        batch,  # 6. BATCH
+        equipo_final,  # 7. EQUIPO UTILIZADO
+        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO
+        cond_equipo,  # 9. CONDICIONES DEL EQUIPO
+        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS
+        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO
+        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO
+        tiempo_calculado,  # 13. TIEMPO
+        responsable,  # 14. RESPONSABLE
+        observacion_final,  # 15. OBSERVACIÓN
     ]
     try:
       datos_existentes = ws.get_all_values()
@@ -404,8 +408,9 @@ with tab2:
             sheet_row_num = local_idx + 2
 
             with st.expander(
-                f"📦 Producto: {row.get('PRODUCTO')} | Lote: {row.get('LOTE')}"
-                f" | Resp: {row.get('RESPONSABLE')}"
+                f"📦 Producto: {row.get('PRODUCTO')} | Línea:"
+                f" {row.get('LÍNEA DE PROCESO')} | Lote:"
+                f" {row.get('LOTE')}"
             ):
               with st.form(key=f"form_edit_{sheet_row_num}"):
                 st.write(
@@ -421,27 +426,32 @@ with tab2:
                   nueva_linea = st.text_input(
                       "LÍNEA DE PROCESO", value=row.get("LÍNEA DE PROCESO", "")
                   )
-                  nuevo_lote = st.text_input("LOTE", value=row.get("LOTE", ""))
+                  nuevo_area = st.text_input(
+                      "CONDICIONES DEL AREA DE TRABAJO",
+                      value=row.get("CONDICIONES DEL AREA DE TRABAJO", ""),
+                  )
                 with col_e2:
+                  nuevo_lote = st.text_input("LOTE", value=row.get("LOTE", ""))
                   nuevo_batch = st.text_input(
                       "BATCH", value=row.get("BATCH", "")
                   )
                   nuevo_resp = st.text_input(
                       "RESPONSABLE", value=row.get("RESPONSABLE", "")
                   )
+                with col_e3:
                   nuevo_equipo = st.text_input(
                       "EQUIPO UTILIZADO", value=row.get("EQUIPO UTILIZADO", "")
                   )
-                with col_e3:
                   nuevo_inicio = st.text_input(
                       "HORA INICIO", value=row.get("HORA INICIO", "")
                   )
                   nuevo_termino = st.text_input(
                       "HORA TÉRMINO", value=row.get("HORA TÉRMINO", "")
                   )
-                  nueva_obs = st.text_area(
-                      "OBSERVACIÓN", value=row.get("OBSERVACIÓN", "")
-                  )
+
+                nueva_obs = st.text_area(
+                    "OBSERVACIÓN", value=row.get("OBSERVACIÓN", "")
+                )
 
                 btn_actualizar = st.form_submit_button(
                     "💾 Guardar Cambios de este Registro"
@@ -450,8 +460,8 @@ with tab2:
                   try:
                     fila_actualizada = [
                         nuevo_prod,
+                        nuevo_area,
                         nueva_linea,
-                        row.get("CONDICIONES DEL AREA DE TRABAJO", "CONFORME"),
                         row.get("F.P", fecha_seleccionada),
                         nuevo_lote,
                         nuevo_batch,
@@ -495,39 +505,3 @@ with tab2:
       st.info("Aún no hay registros guardados en Google Sheets.")
   except Exception as e:
     st.error(f"Error al leer registros: {e}")
-
-  st.markdown("---")
-  st.subheader("📥 Exportar Historial Completo")
-  try:
-    registros_totales = ws.get_all_records()
-    if registros_totales:
-      df_registros = pd.DataFrame(registros_totales)
-      col_down1, col_down2 = st.columns(2)
-
-      buffer_excel = io.BytesIO()
-      with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
-        df_registros.to_excel(
-            writer, index=False, sheet_name="Control_Procesos"
-        )
-      data_excel = buffer_excel.getvalue()
-
-      with col_down1:
-        st.download_button(
-            label="📊 Descargar en Excel (.xlsx)",
-            data=data_excel,
-            file_name=f"CONTROL_PROCESOS_{datetime.date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-
-      data_csv = df_registros.to_csv(index=False).encode("utf-8")
-      with col_down2:
-        st.download_button(
-            label="📄 Descargar en CSV (.csv)",
-            data=data_csv,
-            file_name=f"CONTROL_PROCESOS_{datetime.date.today()}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-  except Exception:
-    pass
