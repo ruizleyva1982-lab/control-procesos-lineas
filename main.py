@@ -53,11 +53,11 @@ def conectar_google_sheets():
 
   cred_dict = {
       "type": "service_account",
-      "project_id": "control-procesos-510021",
+      "project_id": "control-procesos-508810",
       "private_key_id": "4ba35503d5be0db7e99c9da752bb173efee0c609",
       "private_key": private_key_str,
       "client_email": (
-          "control-procesos@control-procesos-510021.iam.gserviceaccount.com"
+          "control-procesos@control-de-procesos-508810.iam.gserviceaccount.com"
       ),
       "client_id": "110338130362201619109",
       "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -66,7 +66,7 @@ def conectar_google_sheets():
           "https://www.googleapis.com/oauth2/v1/certs"
       ),
       "client_x509_cert_url": (
-          "https://www.googleapis.com/robot/v1/metadata/x509/control-procesos%40control-procesos-510021.iam.gserviceaccount.com"
+          "https://www.googleapis.com/robot/v1/metadata/x509/control-procesos%40control-de-procesos-508810.iam.gserviceaccount.com"
       ),
       "universe_domain": "googleapis.com",
   }
