@@ -12,11 +12,12 @@ st.set_page_config(
     layout="wide",
 )
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc/edit?gid=0#gid=0"
+# ID extraído directamente de tu enlace de Google Sheets
+SHEET_ID = "1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc"
 FILE_PATH = "procesos.xlsx"
 
 
-# --- CONEXIÓN SEGURA A GOOGLE SHEETS (SIN CACHÉ PARA EVITAR BLOQUEOS) ---
+# --- CONEXIÓN DIRECTA Y SIN CACHÉ ---
 def conectar_google_sheets():
   pk_lines = [
       "-----BEGIN PRIVATE KEY-----",
@@ -71,13 +72,10 @@ def conectar_google_sheets():
   }
 
   client = gspread.service_account_from_dict(cred_dict)
-  doc = client.open_by_url(SPREADSHEET_URL)
-  # Seleccionamos explícitamente la primera hoja por índice
-  sheet = doc.get_worksheet(0)
-  return sheet
+  doc = client.open_by_key(SHEET_ID)
+  return doc.get_worksheet(0)
 
 
-# --- CABECERAS OFICIALES EXACTAS ---
 headers = [
     "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
@@ -96,14 +94,13 @@ headers = [
     "OBSERVACIÓN",
 ]
 
+# --- LECTURA RÁPIDA ---
 try:
   ws = conectar_google_sheets()
-  # Forzamos reescritura total de cabeceras en A1 asegurando el orden correcto
-  ws.update("A1:O1", [headers])
   data = ws.get_all_records()
   df_actual = pd.DataFrame(data)
 except Exception as e:
-  st.error(f"❌ Error al conectar con Google Sheets: {e}")
+  st.error(f"❌ Error al conectar: {e}")
   df_actual = pd.DataFrame()
 
 if df_actual.empty:
@@ -155,7 +152,7 @@ EQUIPOS_DEFAULT = [
 ]
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=60)
 def cargar_catalogos():
   mapa_linea_productos = CATALOGO_DEFAULT.copy()
   equipos = EQUIPOS_DEFAULT
@@ -211,7 +208,6 @@ def cargar_catalogos():
 mapa_linea_productos, lista_equipos = cargar_catalogos()
 lista_lineas = list(mapa_linea_productos.keys())
 
-# --- NAVEGACIÓN PRINCIPAL ---
 st.title("📋 FORMATO CONTROL DE PROCESOS LÍNEAS")
 tab1, tab2 = st.tabs(
     ["📝 Nuevo Registro", "✏️ Gestionar / Filtrar / Editar / Eliminar"]
@@ -353,32 +349,30 @@ with tab1:
 
   if btn_guardar:
     fila_nueva = [
-        producto_final,  # 1. PRODUCTO (A)
-        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO (B)
-        linea_final,  # 3. LÍNEA DE PROCESO (C)
-        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P (D)
-        lote,  # 5. LOTE (E)
-        batch,  # 6. BATCH (F)
-        equipo_final,  # 7. EQUIPO UTILIZADO (G)
-        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO (H)
-        cond_equipo,  # 9. CONDICIONES DEL EQUIPO (I)
-        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS (J)
-        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO (K)
-        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO (L)
-        tiempo_calculado,  # 13. TIEMPO (M)
-        responsable,  # 14. RESPONSABLE (N)
-        observacion_final,  # 15. OBSERVACIÓN (O)
+        producto_final,
+        cond_area,
+        linea_final,
+        fecha_p.strftime("%Y-%m-%d"),
+        lote,
+        batch,
+        equipo_final,
+        hora_inicio.strftime("%H:%M"),
+        cond_equipo,
+        cond_insumos,
+        caract_producto,
+        hora_termino.strftime("%H:%M"),
+        tiempo_calculado,
+        responsable,
+        observacion_final,
     ]
-    try:
-      # Conexión en vivo exclusiva para la escritura
-      ws_write = conectar_google_sheets()
-      ws_write.append_row(fila_nueva)
-      st.success(
-          "✅ ¡Registro guardado exitosamente en Google Sheets en tiempo real!"
-      )
-      st.rerun()
-    except Exception as e:
-      st.error(f"❌ Error al guardar en Sheets: {e}")
+    with st.spinner("Guardando directamente en Google Sheets..."):
+      try:
+        ws_live = conectar_google_sheets()
+        ws_live.append_row(fila_nueva)
+        st.success("✅ ¡Registrado e insertado en la nube con éxito!")
+        st.rerun()
+      except Exception as e:
+        st.error(f"❌ Error al guardar en Sheets: {e}")
 
 # ==========================================
 # PESTAÑA 2: GESTIONAR, FILTRAR, EDITAR Y ELIMINAR
@@ -461,48 +455,50 @@ with tab2:
                     "💾 Guardar Cambios de este Registro"
                 )
                 if btn_actualizar:
-                  try:
-                    fila_actualizada = [
-                        nuevo_prod,  # 1. PRODUCTO (A)
-                        nuevo_area,  # 2. CONDICIONES DEL AREA DE TRABAJO (B)
-                        nueva_linea,  # 3. LÍNEA DE PROCESO (C)
-                        row.get("F.P", fecha_seleccionada),  # 4. F.P (D)
-                        nuevo_lote,  # 5. LOTE (E)
-                        nuevo_batch,  # 6. BATCH (F)
-                        nuevo_equipo,  # 7. EQUIPO UTILIZADO (G)
-                        nuevo_inicio,  # 8. HORA INICIO (H)
-                        row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
-                        row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
-                        row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
-                        nuevo_termino,
-                        row.get("TIEMPO", "15 min"),
-                        nuevo_resp,
-                        nueva_obs,
-                    ]
-                    ws_upd = conectar_google_sheets()
-                    ws_upd.update(
-                        range_name=f"A{sheet_row_num}:O{sheet_row_num}",
-                        values=[fila_actualizada],
-                    )
-                    st.success(
-                        "✅ ¡Registro actualizado correctamente en Google"
-                        " Sheets!"
-                    )
-                    st.rerun()
-                  except Exception as err:
-                    st.error(f"Error al actualizar: {err}")
+                  with st.spinner("Actualizando en Google Sheets..."):
+                    try:
+                      fila_actualizada = [
+                          nuevo_prod,
+                          nuevo_area,
+                          nueva_linea,
+                          row.get("F.P", fecha_seleccionada),
+                          nuevo_lote,
+                          nuevo_batch,
+                          nuevo_equipo,
+                          nuevo_inicio,
+                          row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
+                          row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
+                          row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
+                          nuevo_termino,
+                          row.get("TIEMPO", "15 min"),
+                          nuevo_resp,
+                          nueva_obs,
+                      ]
+                      ws_upd = conectar_google_sheets()
+                      ws_upd.update(
+                          range_name=f"A{sheet_row_num}:O{sheet_row_num}",
+                          values=[fila_actualizada],
+                      )
+                      st.success(
+                          "✅ ¡Registro actualizado correctamente en Google"
+                          " Sheets!"
+                      )
+                      st.rerun()
+                    except Exception as err:
+                      st.error(f"Error al actualizar: {err}")
 
               if st.button(
                   f"🗑️ Eliminar este registro permanentemente",
                   key=f"del_{sheet_row_num}",
               ):
-                try:
-                  ws_del = conectar_google_sheets()
-                  ws_del.delete_rows(sheet_row_num)
-                  st.success("✅ ¡Registro eliminado de Google Sheets!")
-                  st.rerun()
-                except Exception as err:
-                  st.error(f"Error al eliminar: {err}")
+                with st.spinner("Eliminando de Google Sheets..."):
+                  try:
+                    ws_del = conectar_google_sheets()
+                    ws_del.delete_rows(sheet_row_num)
+                    st.success("✅ ¡Registro eliminado de Google Sheets!")
+                    st.rerun()
+                  except Exception as err:
+                    st.error(f"Error al eliminar: {err}")
         else:
           st.info("No hay fechas registradas en la columna F.P.")
       else:
