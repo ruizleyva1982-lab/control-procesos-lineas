@@ -76,15 +76,7 @@ def conectar_google_sheets():
   return sheet
 
 
-try:
-  ws = conectar_google_sheets()
-  data = ws.get_all_records()
-  df_actual = pd.DataFrame(data)
-except Exception as e:
-  st.error(f"❌ Error al conectar con Google Sheets: {e}")
-  df_actual = pd.DataFrame()
-
-# --- CABECERAS OFICIALES EXACTAS ---
+# --- CABECERAS OFICIALES EXACTAS (CONDICIONES DE ÁREA EN SEGUNDA POSICIÓN) ---
 headers = [
     "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
@@ -102,6 +94,16 @@ headers = [
     "RESPONSABLE",
     "OBSERVACIÓN",
 ]
+
+try:
+  ws = conectar_google_sheets()
+  # Forzar actualización automática de la cabecera en Google Sheets para evitar desajustes
+  ws.update(range_name="A1:O1", values=[headers])
+  data = ws.get_all_records()
+  df_actual = pd.DataFrame(data)
+except Exception as e:
+  st.error(f"❌ Error al conectar con Google Sheets: {e}")
+  df_actual = pd.DataFrame()
 
 if df_actual.empty:
   df_actual = pd.DataFrame(columns=headers)
@@ -349,7 +351,7 @@ with tab1:
     )
 
   if btn_guardar:
-    # ORDEN EXACTO COINCIDENTE CON 'headers'
+    # ORDEN EXACTO COINCIDENTE CON 'headers' (Columna B = CONDICIONES DEL AREA DE TRABAJO)
     fila_nueva = [
         producto_final,  # 1. PRODUCTO
         cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
@@ -368,11 +370,6 @@ with tab1:
         observacion_final,  # 15. OBSERVACIÓN
     ]
     try:
-      datos_existentes = ws.get_all_values()
-      if not datos_existentes:
-        ws.append_row(headers)
-      else:
-        ws.update([headers], range_name="A1")
       ws.append_row(fila_nueva)
       st.success("✅ ¡Registro guardado exitosamente en Google Sheets!")
       st.rerun()
@@ -460,7 +457,6 @@ with tab2:
                 )
                 if btn_actualizar:
                   try:
-                    # ORDEN EXACTO COINCIDENTE CON 'headers' PARA LA EDICIÓN
                     fila_actualizada = [
                         nuevo_prod,  # 1. PRODUCTO
                         nuevo_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
@@ -469,7 +465,7 @@ with tab2:
                         nuevo_lote,  # 5. LOTE
                         nuevo_batch,  # 6. BATCH
                         nuevo_equipo,  # 7. EQUIPO UTILIZADO
-                        nuevo_inicio,  # 8. HORARIO INICIO
+                        nuevo_inicio,  # 8. HORA INICIO
                         row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
                         row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
                         row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
