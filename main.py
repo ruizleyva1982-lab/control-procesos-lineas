@@ -12,12 +12,12 @@ st.set_page_config(
     layout="wide",
 )
 
-# ID extraído directamente de tu enlace de Google Sheets
+# ID oficial de tu Google Sheets
 SHEET_ID = "1eQ64LwSp8cVm0T9o29KJgYqfF5e6yCLeN2RqmuY_ftc"
 FILE_PATH = "procesos.xlsx"
 
 
-# --- CONEXIÓN DIRECTA Y SIN CACHÉ ---
+# --- CONEXIÓN DIRECTA A GOOGLE SHEETS ---
 def conectar_google_sheets():
   pk_lines = [
       "-----BEGIN PRIVATE KEY-----",
@@ -94,13 +94,13 @@ headers = [
     "OBSERVACIÓN",
 ]
 
-# --- LECTURA RÁPIDA ---
+# --- LECTURA SEGURA DE DATOS ---
 try:
   ws = conectar_google_sheets()
   data = ws.get_all_records()
   df_actual = pd.DataFrame(data)
 except Exception as e:
-  st.error(f"❌ Error al conectar: {e}")
+  st.error(f"❌ Error al conectar con Google Sheets: {e}")
   df_actual = pd.DataFrame()
 
 if df_actual.empty:
@@ -152,7 +152,7 @@ EQUIPOS_DEFAULT = [
 ]
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def cargar_catalogos():
   mapa_linea_productos = CATALOGO_DEFAULT.copy()
   equipos = EQUIPOS_DEFAULT
@@ -365,11 +365,12 @@ with tab1:
         responsable,
         observacion_final,
     ]
-    with st.spinner("Guardando directamente en Google Sheets..."):
+    with st.spinner("Guardando en Google Sheets..."):
       try:
         ws_live = conectar_google_sheets()
         ws_live.append_row(fila_nueva)
-        st.success("✅ ¡Registrado e insertado en la nube con éxito!")
+        st.cache_data.clear()  # Limpiar caché para forzar lectura fresca
+        st.success("✅ ¡Registrado en Google Sheets con éxito!")
         st.rerun()
       except Exception as e:
         st.error(f"❌ Error al guardar en Sheets: {e}")
@@ -410,6 +411,7 @@ with tab2:
                 f" {row.get('LÍNEA DE PROCESO')} | Lote:"
                 f" {row.get('LOTE')}"
             ):
+              # Formulario de Edición Seguro
               with st.form(key=f"form_edit_{sheet_row_num}"):
                 st.write(
                     f"Editando registro (Fila en Google Sheets:"
@@ -455,50 +457,50 @@ with tab2:
                     "💾 Guardar Cambios de este Registro"
                 )
                 if btn_actualizar:
-                  with st.spinner("Actualizando en Google Sheets..."):
-                    try:
-                      fila_actualizada = [
-                          nuevo_prod,
-                          nuevo_area,
-                          nueva_linea,
-                          row.get("F.P", fecha_seleccionada),
-                          nuevo_lote,
-                          nuevo_batch,
-                          nuevo_equipo,
-                          nuevo_inicio,
-                          row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
-                          row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
-                          row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
-                          nuevo_termino,
-                          row.get("TIEMPO", "15 min"),
-                          nuevo_resp,
-                          nueva_obs,
-                      ]
-                      ws_upd = conectar_google_sheets()
-                      ws_upd.update(
-                          range_name=f"A{sheet_row_num}:O{sheet_row_num}",
-                          values=[fila_actualizada],
-                      )
-                      st.success(
-                          "✅ ¡Registro actualizado correctamente en Google"
-                          " Sheets!"
-                      )
-                      st.rerun()
-                    except Exception as err:
-                      st.error(f"Error al actualizar: {err}")
-
-              if st.button(
-                  f"🗑️ Eliminar este registro permanentemente",
-                  key=f"del_{sheet_row_num}",
-              ):
-                with st.spinner("Eliminando de Google Sheets..."):
                   try:
-                    ws_del = conectar_google_sheets()
-                    ws_del.delete_rows(sheet_row_num)
-                    st.success("✅ ¡Registro eliminado de Google Sheets!")
+                    fila_actualizada = [
+                        nuevo_prod,
+                        nuevo_area,
+                        nueva_linea,
+                        row.get("F.P", fecha_seleccionada),
+                        nuevo_lote,
+                        nuevo_batch,
+                        nuevo_equipo,
+                        nuevo_inicio,
+                        row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
+                        row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
+                        row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
+                        nuevo_termino,
+                        row.get("TIEMPO", "15 min"),
+                        nuevo_resp,
+                        nueva_obs,
+                    ]
+                    ws_upd = conectar_google_sheets()
+                    ws_upd.update(
+                        range_name=f"A{sheet_row_num}:O{sheet_row_num}",
+                        values=[fila_actualizada],
+                    )
+                    st.cache_data.clear()
+                    st.success("✅ ¡Actualizado en Google Sheets!")
                     st.rerun()
                   except Exception as err:
-                    st.error(f"Error al eliminar: {err}")
+                    st.error(f"Error al actualizar: {err}")
+
+              # Botón de eliminación directo fuera del formulario con clave única garantizada
+              if st.button(
+                  f"🗑️ Eliminar permanentemente (Fila {sheet_row_num})",
+                  key=f"btn_del_row_{sheet_row_num}",
+              ):
+                try:
+                  ws_del = conectar_google_sheets()
+                  ws_del.delete_rows(sheet_row_num)
+                  st.cache_data.clear()
+                  st.success(
+                      f"✅ ¡Fila {sheet_row_num} eliminada de Google Sheets!"
+                  )
+                  st.rerun()
+                except Exception as err:
+                  st.error(f"Error al eliminar: {err}")
         else:
           st.info("No hay fechas registradas en la columna F.P.")
       else:
@@ -506,4 +508,4 @@ with tab2:
     else:
       st.info("Aún no hay registros guardados en Google Sheets.")
   except Exception as e:
-    st.error(f"Error al leer registros: {e}")
+    st.error(f5"Error al leer registros: {e}")
