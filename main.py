@@ -84,7 +84,7 @@ except Exception as e:
   st.error(f"❌ Error al conectar con Google Sheets: {e}")
   df_actual = pd.DataFrame()
 
-# --- CABECERAS: CONDICIONES DEL AREA DE TRABAJO EN LA SEGUNDA POSICIÓN ---
+# --- CABECERAS OFICIALES EXACTAS ---
 headers = [
     "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
@@ -219,7 +219,6 @@ tab1, tab2 = st.tabs(
 # ==========================================
 with tab1:
   with st.form("form_control_proceso", clear_on_submit=True):
-    # 1. CONDICIÓN PRINCIPAL DEL ÁREA PRIMERO
     st.subheader("1. Condición Principal del Área")
     cond_area = st.radio(
         "CONDICIONES DEL AREA DE TRABAJO",
@@ -228,8 +227,6 @@ with tab1:
     )
 
     st.markdown("---")
-
-    # 2. SELECCIÓN DE LÍNEA, PRODUCTO Y EQUIPO
     st.subheader("2. Selección de Línea, Producto y Equipo")
     col_a, col_b, col_c = st.columns(3)
 
@@ -352,22 +349,23 @@ with tab1:
     )
 
   if btn_guardar:
+    # ORDEN EXACTO COINCIDENTE CON 'headers'
     fila_nueva = [
-        producto_final,
-        cond_area,
-        linea_final,
-        fecha_p.strftime("%Y-%m-%d"),
-        lote,
-        batch,
-        equipo_final,
-        hora_inicio.strftime("%H:%M"),
-        cond_equipo,
-        cond_insumos,
-        caract_producto,
-        hora_termino.strftime("%H:%M"),
-        tiempo_calculado,
-        responsable,
-        observacion_final,
+        producto_final,  # 1. PRODUCTO
+        cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
+        linea_final,  # 3. LÍNEA DE PROCESO
+        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P
+        lote,  # 5. LOTE
+        batch,  # 6. BATCH
+        equipo_final,  # 7. EQUIPO UTILIZADO
+        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO
+        cond_equipo,  # 9. CONDICIONES DEL EQUIPO
+        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS
+        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO
+        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO
+        tiempo_calculado,  # 13. TIEMPO
+        responsable,  # 14. RESPONSABLE
+        observacion_final,  # 15. OBSERVACIÓN
     ]
     try:
       datos_existentes = ws.get_all_values()
@@ -462,15 +460,16 @@ with tab2:
                 )
                 if btn_actualizar:
                   try:
+                    # ORDEN EXACTO COINCIDENTE CON 'headers' PARA LA EDICIÓN
                     fila_actualizada = [
-                        nuevo_prod,
-                        nuevo_area,
-                        nueva_linea,
-                        row.get("F.P", fecha_seleccionada),
-                        nuevo_lote,
-                        nuevo_batch,
-                        nuevo_equipo,
-                        nuevo_inicio,
+                        nuevo_prod,  # 1. PRODUCTO
+                        nuevo_area,  # 2. CONDICIONES DEL AREA DE TRABAJO
+                        nueva_linea,  # 3. LÍNEA DE PROCESO
+                        row.get("F.P", fecha_seleccionada),  # 4. F.P
+                        nuevo_lote,  # 5. LOTE
+                        nuevo_batch,  # 6. BATCH
+                        nuevo_equipo,  # 7. EQUIPO UTILIZADO
+                        nuevo_inicio,  # 8. HORARIO INICIO
                         row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
                         row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
                         row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
