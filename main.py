@@ -16,8 +16,7 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1eQ64LwSp8cVm0T9o29KJg
 FILE_PATH = "procesos.xlsx"
 
 
-# --- CONEXIÓN SEGURA A GOOGLE SHEETS ---
-@st.cache_resource
+# --- CONEXIÓN SEGURA A GOOGLE SHEETS (SIN CACHÉ PARA EVITAR BLOQUEOS) ---
 def conectar_google_sheets():
   pk_lines = [
       "-----BEGIN PRIVATE KEY-----",
@@ -72,11 +71,13 @@ def conectar_google_sheets():
   }
 
   client = gspread.service_account_from_dict(cred_dict)
-  sheet = client.open_by_url(SPREADSHEET_URL).sheet1
+  doc = client.open_by_url(SPREADSHEET_URL)
+  # Seleccionamos explícitamente la primera hoja por índice
+  sheet = doc.get_worksheet(0)
   return sheet
 
 
-# --- CABECERAS OFICIALES EXACTAS (CONDICIONES DE ÁREA EN SEGUNDA POSICIÓN) ---
+# --- CABECERAS OFICIALES EXACTAS ---
 headers = [
     "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
@@ -97,9 +98,8 @@ headers = [
 
 try:
   ws = conectar_google_sheets()
-  # Limpieza y actualización absoluta y forzada de la fila 1
-  ws.batch_clear(["A1:O1"])
-  ws.update("A1", [headers])
+  # Forzamos reescritura total de cabeceras en A1 asegurando el orden correcto
+  ws.update("A1:O1", [headers])
   data = ws.get_all_records()
   df_actual = pd.DataFrame(data)
 except Exception as e:
@@ -352,7 +352,6 @@ with tab1:
     )
 
   if btn_guardar:
-    # ORDEN EXACTO COINCIDENTE CON 'headers' (Columna B = CONDICIONES DEL AREA DE TRABAJO)
     fila_nueva = [
         producto_final,  # 1. PRODUCTO (A)
         cond_area,  # 2. CONDICIONES DEL AREA DE TRABAJO (B)
@@ -371,11 +370,15 @@ with tab1:
         observacion_final,  # 15. OBSERVACIÓN (O)
     ]
     try:
-      ws.append_row(fila_nueva)
-      st.success("✅ ¡Registro guardado exitosamente en Google Sheets!")
+      # Conexión en vivo exclusiva para la escritura
+      ws_write = conectar_google_sheets()
+      ws_write.append_row(fila_nueva)
+      st.success(
+          "✅ ¡Registro guardado exitosamente en Google Sheets en tiempo real!"
+      )
       st.rerun()
     except Exception as e:
-      st.error(f"❌ Error al guardar: {e}")
+      st.error(f"❌ Error al guardar en Sheets: {e}")
 
 # ==========================================
 # PESTAÑA 2: GESTIONAR, FILTRAR, EDITAR Y ELIMINAR
@@ -384,7 +387,8 @@ with tab2:
   st.subheader("🔍 Filtrar, Editar y Eliminar Registros por Fecha")
 
   try:
-    rows_all = ws.get_all_values()
+    ws_read = conectar_google_sheets()
+    rows_all = ws_read.get_all_values()
     if len(rows_all) > 1:
       head = rows_all[0]
       body = rows_all[1:]
@@ -475,7 +479,8 @@ with tab2:
                         nuevo_resp,
                         nueva_obs,
                     ]
-                    ws.update(
+                    ws_upd = conectar_google_sheets()
+                    ws_upd.update(
                         range_name=f"A{sheet_row_num}:O{sheet_row_num}",
                         values=[fila_actualizada],
                     )
@@ -492,7 +497,8 @@ with tab2:
                   key=f"del_{sheet_row_num}",
               ):
                 try:
-                  ws.delete_rows(sheet_row_num)
+                  ws_del = conectar_google_sheets()
+                  ws_del.delete_rows(sheet_row_num)
                   st.success("✅ ¡Registro eliminado de Google Sheets!")
                   st.rerun()
                 except Exception as err:
