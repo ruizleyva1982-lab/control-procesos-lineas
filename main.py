@@ -76,9 +76,10 @@ def conectar_google_sheets():
   return doc.get_worksheet(0)
 
 
+# --- CABECERAS CORREGIDAS: CONDICIONES DE ÁREA PRIMERO (A), PRODUCTO SEGUNDO (B) ---
 headers = [
-    "PRODUCTO",
     "CONDICIONES DEL AREA DE TRABAJO",
+    "PRODUCTO",
     "LÍNEA DE PROCESO",
     "F.P",
     "LOTE",
@@ -348,22 +349,23 @@ with tab1:
     )
 
   if btn_guardar:
+    # ORDEN EXACTO: Columna A = CONDICIONES DEL AREA, Columna B = PRODUCTO
     fila_nueva = [
-        producto_final,
-        cond_area,
-        linea_final,
-        fecha_p.strftime("%Y-%m-%d"),
-        lote,
-        batch,
-        equipo_final,
-        hora_inicio.strftime("%H:%M"),
-        cond_equipo,
-        cond_insumos,
-        caract_producto,
-        hora_termino.strftime("%H:%M"),
-        tiempo_calculado,
-        responsable,
-        observacion_final,
+        cond_area,  # 1. CONDICIONES DEL AREA DE TRABAJO (A)
+        producto_final,  # 2. PRODUCTO (B)
+        linea_final,  # 3. LÍNEA DE PROCESO (C)
+        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P (D)
+        lote,  # 5. LOTE (E)
+        batch,  # 6. BATCH (F)
+        equipo_final,  # 7. EQUIPO UTILIZADO (G)
+        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO (H)
+        cond_equipo,  # 9. CONDICIONES DEL EQUIPO (I)
+        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS (J)
+        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO (K)
+        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO (L)
+        tiempo_calculado,  # 13. TIEMPO (M)
+        responsable,  # 14. RESPONSABLE (N)
+        observacion_final,  # 15. OBSERVACIÓN (O)
     ]
     with st.spinner("Guardando en Google Sheets..."):
       try:
@@ -419,12 +421,12 @@ with tab2:
 
                 col_e1, col_e2, col_e3 = st.columns(3)
                 with col_e1:
-                  nuevo_prod = st.text_input(
-                      "PRODUCTO", value=row.get("PRODUCTO", "")
-                  )
                   nuevo_area = st.text_input(
                       "CONDICIONES DEL AREA DE TRABAJO",
                       value=row.get("CONDICIONES DEL AREA DE TRABAJO", ""),
+                  )
+                  nuevo_prod = st.text_input(
+                      "PRODUCTO", value=row.get("PRODUCTO", "")
                   )
                   nueva_linea = st.text_input(
                       "LÍNEA DE PROCESO", value=row.get("LÍNEA DE PROCESO", "")
@@ -458,14 +460,14 @@ with tab2:
                 if btn_actualizar:
                   try:
                     fila_actualizada = [
-                        nuevo_prod,
-                        nuevo_area,
-                        nueva_linea,
-                        row.get("F.P", fecha_seleccionada),
-                        nuevo_lote,
-                        nuevo_batch,
-                        nuevo_equipo,
-                        nuevo_inicio,
+                        nuevo_area,  # 1. CONDICIONES DEL AREA DE TRABAJO (A)
+                        nuevo_prod,  # 2. PRODUCTO (B)
+                        nueva_linea,  # 3. LÍNEA DE PROCESO (C)
+                        row.get("F.P", fecha_seleccionada),  # 4. F.P (D)
+                        nuevo_lote,  # 5. LOTE (E)
+                        nuevo_batch,  # 6. BATCH (F)
+                        nuevo_equipo,  # 7. EQUIPO UTILIZADO (G)
+                        nuevo_inicio,  # 8. HORA INICIO (H)
                         row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
                         row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
                         row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
