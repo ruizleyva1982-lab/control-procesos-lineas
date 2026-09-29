@@ -76,7 +76,7 @@ def conectar_google_sheets():
   return doc.get_worksheet(0)
 
 
-# --- CABECERAS CORREGIDAS: CONDICIONES DE ÁREA PRIMERO (A), PRODUCTO SEGUNDO (B) ---
+# --- CABECERAS EXACTAS SEGÚN TU GOOGLE SHEETS (15 Columnas de A a O) ---
 headers = [
     "CONDICIONES DEL AREA DE TRABAJO",
     "PRODUCTO",
@@ -299,11 +299,13 @@ with tab1:
       )
     with col9:
       cond_insumos = st.radio(
-          "CONDICIONES INSUMOS", ["CONFORME", "NO CONFORME"], horizontal=True
+          "CONDICIONES DE LOS INSUMOS",
+          ["CONFORME", "NO CONFORME"],
+          horizontal=True,
       )
     with col10:
       caract_producto = st.radio(
-          "CARACTERISTICAS PRODUCTO",
+          "CARACTERISTICAS DEL PRODUCTO",
           ["CONFORME", "NO CONFORME"],
           horizontal=True,
       )
@@ -349,23 +351,23 @@ with tab1:
     )
 
   if btn_guardar:
-    # ORDEN EXACTO: Columna A = CONDICIONES DEL AREA, Columna B = PRODUCTO
+    # ORDEN EXACTO DE LAS 15 COLUMNAS (DE A HASTA O)
     fila_nueva = [
-        cond_area,  # 1. CONDICIONES DEL AREA DE TRABAJO (A)
-        producto_final,  # 2. PRODUCTO (B)
-        linea_final,  # 3. LÍNEA DE PROCESO (C)
-        fecha_p.strftime("%Y-%m-%d"),  # 4. F.P (D)
-        lote,  # 5. LOTE (E)
-        batch,  # 6. BATCH (F)
-        equipo_final,  # 7. EQUIPO UTILIZADO (G)
-        hora_inicio.strftime("%H:%M"),  # 8. HORA INICIO (H)
-        cond_equipo,  # 9. CONDICIONES DEL EQUIPO (I)
-        cond_insumos,  # 10. CONDICIONES DE LOS INSUMOS (J)
-        caract_producto,  # 11. CARACTERISTICAS DEL PRODUCTO (K)
-        hora_termino.strftime("%H:%M"),  # 12. HORA TÉRMINO (L)
-        tiempo_calculado,  # 13. TIEMPO (M)
-        responsable,  # 14. RESPONSABLE (N)
-        observacion_final,  # 15. OBSERVACIÓN (O)
+        cond_area,  # A: CONDICIONES DEL AREA DE TRABAJO
+        producto_final,  # B: PRODUCTO
+        linea_final,  # C: LÍNEA DE PROCESO
+        fecha_p.strftime("%Y-%m-%d"),  # D: F.P
+        lote,  # E: LOTE
+        batch,  # F: BATCH
+        equipo_final,  # G: EQUIPO UTILIZADO
+        hora_inicio.strftime("%H:%M"),  # H: HORA INICIO
+        cond_equipo,  # I: CONDICIONES DEL EQUIPO
+        cond_insumos,  # J: CONDICIONES DE LOS INSUMOS
+        caract_producto,  # K: CARACTERISTICAS DEL PRODUCTO
+        hora_termino.strftime("%H:%M"),  # L: HORA TÉRMINO
+        tiempo_calculado,  # M: TIEMPO
+        responsable,  # N: RESPONSABLE
+        observacion_final,  # O: OBSERVACIÓN
     ]
     with st.spinner("Guardando en Google Sheets..."):
       try:
@@ -460,14 +462,14 @@ with tab2:
                 if btn_actualizar:
                   try:
                     fila_actualizada = [
-                        nuevo_area,  # 1. CONDICIONES DEL AREA DE TRABAJO (A)
-                        nuevo_prod,  # 2. PRODUCTO (B)
-                        nueva_linea,  # 3. LÍNEA DE PROCESO (C)
-                        row.get("F.P", fecha_seleccionada),  # 4. F.P (D)
-                        nuevo_lote,  # 5. LOTE (E)
-                        nuevo_batch,  # 6. BATCH (F)
-                        nuevo_equipo,  # 7. EQUIPO UTILIZADO (G)
-                        nuevo_inicio,  # 8. HORA INICIO (H)
+                        nuevo_area,
+                        nuevo_prod,
+                        nueva_linea,
+                        row.get("F.P", fecha_seleccionada),
+                        nuevo_lote,
+                        nuevo_batch,
+                        nuevo_equipo,
+                        nuevo_inicio,
                         row.get("CONDICIONES DEL EQUIPO", "CONFORME"),
                         row.get("CONDICIONES DE LOS INSUMOS", "CONFORME"),
                         row.get("CARACTERISTICAS DEL PRODUCTO", "CONFORME"),
