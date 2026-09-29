@@ -369,7 +369,7 @@ with tab1:
       try:
         ws_live = conectar_google_sheets()
         ws_live.append_row(fila_nueva)
-        st.cache_data.clear()  # Limpiar caché para forzar lectura fresca
+        st.cache_data.clear()
         st.success("✅ ¡Registrado en Google Sheets con éxito!")
         st.rerun()
       except Exception as e:
@@ -411,7 +411,6 @@ with tab2:
                 f" {row.get('LÍNEA DE PROCESO')} | Lote:"
                 f" {row.get('LOTE')}"
             ):
-              # Formulario de Edición Seguro
               with st.form(key=f"form_edit_{sheet_row_num}"):
                 st.write(
                     f"Editando registro (Fila en Google Sheets:"
@@ -486,7 +485,6 @@ with tab2:
                   except Exception as err:
                     st.error(f"Error al actualizar: {err}")
 
-              # Botón de eliminación directo fuera del formulario con clave única garantizada
               if st.button(
                   f"🗑️ Eliminar permanentemente (Fila {sheet_row_num})",
                   key=f"btn_del_row_{sheet_row_num}",
@@ -508,4 +506,4 @@ with tab2:
     else:
       st.info("Aún no hay registros guardados en Google Sheets.")
   except Exception as e:
-    st.error(f5"Error al leer registros: {e}")
+    st.error(f"Error al leer registros: {e}")
